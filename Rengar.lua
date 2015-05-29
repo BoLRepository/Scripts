@@ -24,7 +24,8 @@ function OnLoad()
     TH = {  Slot = function() return GetInventorySlotItem(3077) or GetInventorySlotItem(3074) or nil end, Ready = function() return myHero:CanUseSpell(TH.Slot) or false end }      
 
     _SAC = false
-    _TrueRange = myHero.range + GetDistance(myHero.minBBox) + 50
+    --_TrueRange = myHero.range + GetDistance(myHero.minBBox) + 50
+    _TrueRange = myHero.range + GetDistance(myHero.minBBox)
     _LastLeap = 0
     _Stealth = false
 
