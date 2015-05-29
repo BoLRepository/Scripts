@@ -5,7 +5,7 @@ function Debug(message) print("<font color=\"#FFFFFF\"><b>Rengar:</font> </b><fo
 
 function OnLoad() 
     local ToUpdate = {}
-    ToUpdate.Version = 0.01
+    ToUpdate.Version = 0.02
     ToUpdate.UseHttps = true
     ToUpdate.Host = "raw.githubusercontent.com"
     ToUpdate.VersionPath = "/BoLRepository/Scripts/master/Rengar.version"
