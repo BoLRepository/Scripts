@@ -10,7 +10,6 @@ function OnLoad()
     ToUpdate.Host = "raw.githubusercontent.com"
     ToUpdate.VersionPath = "/BoLRepository/Scripts/master/Rengar.version"
     ToUpdate.ScriptPath =  "/BoLRepository/Scripts/master/Rengar.lua"
-    --ToUpdate.SavePath = SCRIPT_PATH.."/Test.lua"
 	ToUpdate.SavePath = SCRIPT_PATH..GetCurrentEnv().FILE_NAME
     ToUpdate.CallbackUpdate = function(NewVersion,OldVersion) print("<font color=\"#FFFFFF\"><b>Rengar: </b></font> <font color=\"#4c934c\">Updated to "..NewVersion..". </b></font>") end
     ToUpdate.CallbackNoUpdate = function(OldVersion) print("<font color=\"#FFFFFF\"><b>Rengar: </b></font> <font color=\"#4c934c\">No Updates Found</b></font>") end
@@ -19,14 +18,13 @@ function OnLoad()
     ScriptUpdate(ToUpdate.Version,ToUpdate.UseHttps, ToUpdate.Host, ToUpdate.VersionPath, ToUpdate.ScriptPath, ToUpdate.SavePath, ToUpdate.CallbackUpdate,ToUpdate.CallbackNoUpdate, ToUpdate.CallbackNewVersion,ToUpdate.CallbackError)
 
     Spells = {  Q = { Name = "RengarQ", Ready = function() return myHero:CanUseSpell(_Q) end },
-            W = { Name = "RengarW", Ready = function() return myHero:CanUseSpell(_W) end, Range = 480 }, --500
-            E = { Name = "RengarE", Ready = function() return myHero:CanUseSpell(_E) end, Range = 1000, Speed = 1500, Width = 75, Delay = 0.25 },
-            R = { Name = "RengarR", Ready = function() return myHero:CanUseSpell(_R) end } }
+                W = { Name = "RengarW", Ready = function() return myHero:CanUseSpell(_W) end, Range = 480 }, --500
+                E = { Name = "RengarE", Ready = function() return myHero:CanUseSpell(_E) end, Range = 1000, Speed = 1500, Width = 75, Delay = 0.25 },
+                R = { Name = "RengarR", Ready = function() return myHero:CanUseSpell(_R) end } }
     TH = {  Slot = function() return GetInventorySlotItem(3077) or GetInventorySlotItem(3074) or nil end, Ready = function() return myHero:CanUseSpell(TH.Slot) or false end }      
 
     _SAC = false
-    --_TrueRange = myHero.range + GetDistance(myHero.minBBox) + 50
-    _TrueRange = myHero.range + GetDistance(myHero.minBBox)
+    _TrueRange = myHero.range + GetDistance(myHero.minBBox) + 50
     _LastLeap = 0
 
     HPred = HPrediction()
@@ -42,9 +40,11 @@ function OnLoad()
         Menu.Combo:addParam("empW", "Use Empowered W", SCRIPT_PARAM_ONOFF, false)
         Menu.Combo:addParam("empE", "Use Empowered E", SCRIPT_PARAM_ONOFF, true)
         Menu.Combo:addParam("sep", "", SCRIPT_PARAM_INFO, "")
-        Menu.Combo:addParam("comboType", "Combo Type", SCRIPT_PARAM_LIST, 1, { "Savagery (Q)", "Battle Roar (W)", "Bola Strike (E)"})
-        Menu.Combo:addParam("comboDelay", "Leap Combo Delay", SCRIPT_PARAM_SLICE, 1000, 0, 2000, 0)
-        --Menu.combo:addParam("comboMode", "Switch Combo Mode (Default: T)", SCRIPT_PARAM_ONKEYTOGGLE, false, GetKey("T"))
+        Menu.Combo:addParam("comboType", "Combo Type", SCRIPT_PARAM_LIST, 1, {"Savagery (Q)", "Battle Roar (W)", "Bola Strike (E)"})
+        Menu.Combo:addParam("comboDelay", "Combo Delay", SCRIPT_PARAM_SLICE, 1000, 0, 2000, 0)
+        Menu.Combo:addParam("comboDraw", "Draw Combo Type", SCRIPT_PARAM_ONOFF, true)
+        --Menu.Combo:addParam("sep", "", SCRIPT_PARAM_INFO, "")
+        --Menu.Combo:addParam("comboSwitch", "Switch Combo Type (Default: T)", SCRIPT_PARAM_ONKEYTOGGLE, false, GetKey("T"))
     Menu:addSubMenu("Harass Menu", "Harass")
         Menu.Harass:addParam("empQ", "Use Empowered Q", SCRIPT_PARAM_ONOFF, true)
         Menu.Harass:addParam("empW", "Use Empowered W", SCRIPT_PARAM_ONOFF, true)
@@ -66,7 +66,7 @@ end
 
 function OnTick()
     if myHero.dead then return end
-    if _TrueRange > 300 then _TrueRange = myHero.range + GetDistance(myHero.minBBox) end
+    if _TrueRange > 500 then _TrueRange = myHero.range + GetDistance(myHero.minBBox) + 50 end
     
     local function getTarget()
         if _SAC and ValidTarget(_G.AutoCarry.Crosshair:GetTarget()) then 
@@ -99,9 +99,16 @@ function OnTick()
                 if Menu.Combo.empE then CastE(Target) end   
             end       
         elseif myHero.mana < 5 then
-            CastQ(Target)
-            CastW(Target)
-            CastE(Target)
+            if (GetTickCount() - _LastLeap) <= Menu.Combo.comboDelay then
+                CastQ(Target)
+                CastW(Target)
+                CastE(Target)
+                if TH.Slot ~= nil and GetDistance(Target, myHero) < _TrueRange and TH.Ready == true then CastSpell(TH.Slot) end
+            else
+                CastQ(Target)
+                CastW(Target)
+                CastE(Target)
+            end
         end
     end
 
@@ -138,10 +145,10 @@ function CastE(t)
 end
 
 function OnDraw()
-    --if Target then DrawCircle(Target.x, Target.y, Target.z, 200, 0xFFFFFF) end
-    --[[if GetTickCount() - _LastLeap <= Menu.comboDelay then
-        DrawText("LEAPING", 20, 100, 100, ARGB(255,178, 0 , 0 ))
-    end]]
+    if Menu.Combo.comboDraw then
+        local comboType = {"Savagery (Q)", "Battle Roar (W)", "Bola Strike (E)"}
+        DrawText(comboType[Menu.Combo.comboType], 15, 150, 150, ARGB(255, 255, 255, 255))
+    end
 end
 
 function OnCreateObj(object)
