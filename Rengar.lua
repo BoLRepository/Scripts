@@ -5,7 +5,7 @@ function Debug(message) print("<font color=\"#FFFFFF\"><b>Rengar:</font> </b><fo
 
 function OnLoad() 
     local ToUpdate = {}
-    ToUpdate.Version = 0.02
+    ToUpdate.Version = 0.03
     ToUpdate.UseHttps = true
     ToUpdate.Host = "raw.githubusercontent.com"
     ToUpdate.VersionPath = "/BoLRepository/Scripts/master/Rengar.version"
@@ -26,6 +26,7 @@ function OnLoad()
     _SAC = false
     _TrueRange = myHero.range + GetDistance(myHero.minBBox) + 50
     _LastLeap = 0
+    _Stealth = false
 
     HPred = HPrediction()
     HPred:AddSpell("E","Rengar", {collisionM = true, collisionH = true, delay = Spells.E.Delay, range = Spells.E.Range, speed = Spells.E.Speed, type = "DelayLine", width = Spells.E.Width, IsLowAccuracy = false})
@@ -65,7 +66,11 @@ function OnLoad()
 end
 
 function OnTick()
-    if myHero.dead then return end
+    if myHero.dead then 
+        _LastLeap = 0
+        _Stealth = false
+        return 
+    end
     if _TrueRange > 500 then _TrueRange = myHero.range + GetDistance(myHero.minBBox) + 50 end
     
     local function getTarget()
@@ -76,39 +81,27 @@ function OnTick()
     end
     Target = getTarget()
 
-    if Menu.autoHeal and ((myHero.health / myHero.maxHealth * 100) < Menu.autoHealHP) then
-        if Spells.W.Ready == false then return end
-        if myHero.mana == 5 then CastSpell(_W) end
-
-        for i, enemy in pairs(enemyTable) do
-            if GetDistance(myHero, enemy) < Spells.W.Range and myHero.mana == 4 then    
-                CastSpell(_W)
-            end
-        end
-    end
-
+    if _Stealth == true then return end
     if Target and Menu.comboKey then
-        if myHero.mana == 5 then
-            if (GetTickCount() - _LastLeap) <= Menu.Combo.comboDelay then
+        if (GetTickCount() - _LastLeap) <= Menu.Combo.comboDelay then
+            if myHero.mana == 5 then
                 if Menu.Combo.comboType == 1 then CastSpell(_Q) end
                 if Menu.Combo.comboType == 2 then CastW(Target) end
                 if Menu.Combo.comboType == 3 then CastE(Target) end
             else
-                if Menu.Combo.empQ then CastQ(Target) end              
-                if Menu.Combo.empW then CastW(Target) end
-                if Menu.Combo.empE then CastE(Target) end   
-            end       
-        elseif myHero.mana < 5 then
-            if (GetTickCount() - _LastLeap) <= Menu.Combo.comboDelay then
                 CastQ(Target)
                 CastW(Target)
                 CastE(Target)
                 if TH.Slot ~= nil and GetDistance(Target, myHero) < _TrueRange and TH.Ready == true then CastSpell(TH.Slot) end
-            else
-                CastQ(Target)
-                CastW(Target)
-                CastE(Target)
             end
+        elseif myHero.mana == 5 then
+            if Menu.Combo.empQ then CastQ(Target) end              
+            if Menu.Combo.empW then CastW(Target) end
+            if Menu.Combo.empE then CastE(Target) end
+        else
+            CastQ(Target)
+            CastW(Target)
+            CastE(Target)
         end
     end
 
@@ -122,6 +115,43 @@ function OnTick()
             CastW(Target)
             CastE(Target)
         end
+    end
+
+    if Menu.autoHeal and ((myHero.health / myHero.maxHealth * 100) < Menu.autoHealHP) then
+        if Spells.W.Ready == false then return end
+        if myHero.mana == 5 then CastSpell(_W) end
+
+        for i, enemy in pairs(enemyTable) do
+            if GetDistance(myHero, enemy) < Spells.W.Range and myHero.mana == 4 then    
+                CastSpell(_W)
+            end
+        end
+    end
+end
+
+function OnDraw()
+    if Menu.Combo.comboDraw then
+        local comboType = {"Savagery (Q)", "Battle Roar (W)", "Bola Strike (E)"}
+        DrawText(comboType[Menu.Combo.comboType], 15, 150, 150, ARGB(255, 255, 255, 255))
+    end
+end
+
+function OnCreateObj(object)
+    --if object and object.name == "Rengar_LeapSound.troy" and GetDistance(myHero, object) < 50 then 
+    if object and object.name:lower():find("leap") and GetDistance(myHero, object) < 50 then
+        _LastLeap = GetTickCount()
+    end
+end
+
+function OnApplyBuff(source, unit, buff)
+    if unit and unit.isMe and buff.name == "RengarR" then
+        _Stealth = true
+    end
+end
+
+function OnRemoveBuff(unit, buff)
+    if unit and unit.isMe and buff.name == "RengarR" then
+        _Stealth = false
     end
 end
 
@@ -141,20 +171,6 @@ function CastE(t)
     EPos, EHitChance = HPred:GetPredict("E", t, myHero)
     if EPos and EHitChance and EHitChance >= 2 then
         CastSpell(_E, EPos.x, EPos.z)
-    end
-end
-
-function OnDraw()
-    if Menu.Combo.comboDraw then
-        local comboType = {"Savagery (Q)", "Battle Roar (W)", "Bola Strike (E)"}
-        DrawText(comboType[Menu.Combo.comboType], 15, 150, 150, ARGB(255, 255, 255, 255))
-    end
-end
-
-function OnCreateObj(object)
-    --if object and object.name == "Rengar_LeapSound.troy" and GetDistance(myHero, object) < 50 then 
-    if object and object.name:lower():find("leap") and GetDistance(myHero, object) < 50 then
-        _LastLeap = GetTickCount()
     end
 end
 
