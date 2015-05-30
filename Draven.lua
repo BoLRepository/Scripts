@@ -6,7 +6,7 @@ function Debug(message) print("<font color=\"#4c934c\"><b>Draven:</font> </b><fo
 
 function OnLoad() 
     local ToUpdate = {}
-    ToUpdate.Version = 0.01
+    ToUpdate.Version = 0.02
     ToUpdate.UseHttps = true
     ToUpdate.Host = "raw.githubusercontent.com"
     ToUpdate.VersionPath = "/BoLRepository/Scripts/master/Draven.version"
@@ -20,7 +20,7 @@ function OnLoad()
 
     Spells = {  Q = { Name = "DravenSpinning",   Ready = function() return myHero:CanUseSpell(_Q) end, Delay = 0.25},
                 W = { Name = "DravenFury",       Ready = function() return myHero:CanUseSpell(_W) end, Delay = 0.25},
-                E = { Name = "DravenDoubleShot", Ready = function() return myHero:CanUseSpell(_E) end, Delay = 0.25, Width = 130, Speed = 1400, Range = 1100}, --incorrect?
+                E = { Name = "DravenDoubleShot", Ready = function() return myHero:CanUseSpell(_E) end, Delay = 0.25, Width = 130, Speed = 1400, Range = 1050}, --1100? incorrect?
                 R = { Name = "DravenRCast",      Ready = function() return myHero:CanUseSpell(_R) end, Delay = 0.5, Width = 160, Speed = 2000} }
 
     _SAC = false
@@ -169,7 +169,7 @@ end
 --={===================================~}=--
 
 function CastW(t)
-    if GetDistance(myHero, Target) < Spells.E.Range then
+    if GetDistance(myHero, t) < Spells.E.Range then
         CastSpell(_W)
     end
 end
