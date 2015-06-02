@@ -1,11 +1,12 @@
 if myHero.charName ~= "Rengar" then return end
-	require 'HPrediction'
+	--require "SxOrbWalk"
+    require "HPrediction"
 
 function Debug(message) print("<font color=\"#FFFFFF\"><b>Rengar:</font> </b><font color=\"#4c934c\">" .. message) end
 
 function OnLoad() 
     local ToUpdate = {}
-    ToUpdate.Version = 0.03
+    ToUpdate.Version = 0.04
     ToUpdate.UseHttps = true
     ToUpdate.Host = "raw.githubusercontent.com"
     ToUpdate.VersionPath = "/BoLRepository/Scripts/master/Rengar.version"
@@ -24,7 +25,6 @@ function OnLoad()
     TH = {  Slot = function() return GetInventorySlotItem(3077) or GetInventorySlotItem(3074) or nil end, Ready = function() return myHero:CanUseSpell(TH.Slot) or false end }      
 
     _SAC = false
-    --_TrueRange = myHero.range + GetDistance(myHero.minBBox) + 50
     _TrueRange = myHero.range + GetDistance(myHero.minBBox)
     _LastLeap = 0
     _Stealth = false
@@ -45,22 +45,39 @@ function OnLoad()
         Menu.Combo:addParam("comboType", "Combo Type", SCRIPT_PARAM_LIST, 1, {"Savagery (Q)", "Battle Roar (W)", "Bola Strike (E)"})
         Menu.Combo:addParam("comboDelay", "Combo Delay", SCRIPT_PARAM_SLICE, 1000, 0, 2000, 0)
         Menu.Combo:addParam("comboDraw", "Draw Combo Type", SCRIPT_PARAM_ONOFF, true)
-        --Menu.Combo:addParam("sep", "", SCRIPT_PARAM_INFO, "")
-        --Menu.Combo:addParam("comboSwitch", "Switch Combo Type (Default: T)", SCRIPT_PARAM_ONKEYTOGGLE, false, GetKey("T"))
+        Menu.Combo:addParam("comboSwitch", "Switch Combo Type (Default: T)", SCRIPT_PARAM_ONKEYTOGGLE, false, GetKey("T"))
     Menu:addSubMenu("Harass Menu", "Harass")
         Menu.Harass:addParam("empQ", "Use Empowered Q", SCRIPT_PARAM_ONOFF, true)
         Menu.Harass:addParam("empW", "Use Empowered W", SCRIPT_PARAM_ONOFF, true)
         Menu.Harass:addParam("empE", "Use Empowered E", SCRIPT_PARAM_ONOFF, true)
+    Menu:addSubMenu("LaneClear Menu", "LaneClear")
+        Menu.LaneClear:addParam("empQ", "Use Empowered Q", SCRIPT_PARAM_ONOFF, true)
+        Menu.LaneClear:addParam("empW", "Use Empowered W", SCRIPT_PARAM_ONOFF, false)
+        Menu.LaneClear:addParam("empE", "Use Empowered E", SCRIPT_PARAM_ONOFF, false)
+    Menu:addSubMenu("LastHit Menu", "LastHit")
+        Menu.LastHit:addParam("empQ", "Use Empowered Q", SCRIPT_PARAM_ONOFF, true)
+        Menu.LastHit:addParam("empW", "Use Empowered W", SCRIPT_PARAM_ONOFF, true)
+        Menu.LastHit:addParam("empE", "Use Empowered E", SCRIPT_PARAM_ONOFF, true)
     Menu:addParam("sep", "", SCRIPT_PARAM_INFO, "")
     Menu:addParam("autoHeal", "Auto-Heal", SCRIPT_PARAM_ONOFF, false)
     Menu:addParam("autoHealHP", "Auto-Heal % Health", SCRIPT_PARAM_SLICE, 25, 0, 100, 0)
     Menu:addParam("sep", "", SCRIPT_PARAM_INFO, "") 
+    --[[Menu:addSubMenu('Orbwalker', 'Orbwalker')
+        SxOrb:LoadToMenu(Menu.Orbwalker, true)
+        SxOrb:RegisterHotKey('fight',     Menu, 'comboKey')
+        SxOrb:RegisterHotKey('harass',    Menu, 'harassKey')
+        SxOrb:RegisterHotKey('laneclear', Menu, 'laneclearKey')
+        SxOrb:RegisterHotKey('lasthit',   Menu, 'lasthitKey')]]
     Menu:addParam("comboKey", "Combo", SCRIPT_PARAM_ONKEYDOWN, false, 32)
     Menu:addParam("harassKey", "Harass", SCRIPT_PARAM_ONKEYDOWN, false, GetKey("C"))
+    Menu:addParam("laneclearKey", "Lane Clear", SCRIPT_PARAM_ONKEYDOWN, false, GetKey("V"))
+    Menu:addParam("lasthitKey", "Last Hit", SCRIPT_PARAM_ONKEYDOWN, false, GetKey("X"))
 
     DelayAction(function() 
+        --if _G.AutoCarry and Menu.Orbwalker.General.Enabled and Menu.Orbwalker.General.Enabled == true then
         if _G.AutoCarry then
             Debug("Found SAC!")
+            --Menu.Orbwalker.General.Enabled = false
             _SAC = true
         end
     end, 6)
@@ -72,11 +89,24 @@ function OnTick()
         _Stealth = false
         return 
     end
-    if _TrueRange > 500 then _TrueRange = myHero.range + GetDistance(myHero.minBBox) + 50 end
-    
+    if _TrueRange > 500 then _TrueRange = myHero.range + GetDistance(myHero.minBBox) end
+
+    if Menu.Combo.comboSwitch then
+        if Menu.Combo.comboType == 1 then 
+            Menu.Combo.comboType = 2
+        elseif Menu.Combo.comboType == 2 then 
+            Menu.Combo.comboType = 3
+        elseif Menu.Combo.comboType == 3 then 
+            Menu.Combo.comboType = 1
+        end
+        Menu.Combo.comboSwitch = false
+    end
+
     local function getTarget()
         if _SAC and ValidTarget(_G.AutoCarry.Crosshair:GetTarget()) then 
             return _G.AutoCarry.Crosshair:GetTarget()
+        --[[elseif Menu.Orbwalker.General.Enabled and Menu.Orbwalker.General.Enabled == true and ValidTarget(SxOrb:GetTarget()) then
+            return SxOrb:GetTarget()]]
         end
         return nil
     end
@@ -118,11 +148,60 @@ function OnTick()
         end
     end
 
+    if Menu.laneclearKey then
+        minions:update()
+        for i, minion in ipairs(minions.objects) do
+            if myHero.mana == 5 then
+                if Menu.LaneClear.empQ then CastQ(minion) end              
+                if Menu.LaneClear.empW then CastW(minion) end
+                if Menu.LaneClear.empE then CastE(minion) end          
+            else
+                CastQ(minion)
+                CastW(minion)
+                CastE(minion)
+            end
+        end
+
+        jminions:update()
+        for i, minion in ipairs(jminions.objects) do
+            if myHero.mana == 5 then
+                if Menu.LaneClear.empQ then CastQ(minion) end              
+                if Menu.LaneClear.empW then CastW(minion) end
+                if Menu.LaneClear.empE then CastE(minion) end          
+            else
+                CastQ(minion)
+                CastW(minion)
+                CastE(minion)
+            end
+        end
+    end
+
+    if Menu.lasthitKey then
+        minions:update()
+        for i, minion in ipairs(minions.objects) do
+            _dmg = { Q = SpellDmg("Q", minion) + SpellDmg("AD", minion),
+                     W = SpellDmg("W", minion),
+                     E = SpellDmg("E", minion) }
+            if myHero.mana == 5 then
+                if Menu.LaneClear.empQ and _dmg.Q > minion.health then CastQ(minion) end              
+                if Menu.LaneClear.empW and _dmg.W > minion.health then CastW(minion) end
+                if Menu.LaneClear.empE and _dmg.E > minion.health then CastE(minion) end          
+            else
+                if _dmg.Q > minion.health then CastQ(minion) end
+                if _dmg.W > minion.health then CastW(minion) end
+                if _dmg.E > minion.health then CastE(minion) end
+            end
+        end
+    end
+
     if Menu.autoHeal and ((myHero.health / myHero.maxHealth * 100) < Menu.autoHealHP) then
         if Spells.W.Ready == false then return end
-        if myHero.mana == 5 then CastSpell(_W) end
+        if myHero.mana == 5 then 
+            CastSpell(_W) 
+            return
+        end
 
-        for i, enemy in pairs(enemyTable) do
+        for i, enemy in ipairs(enemyTable) do
             if GetDistance(myHero, enemy) < Spells.W.Range and myHero.mana == 4 then    
                 CastSpell(_W)
             end
@@ -173,6 +252,10 @@ function CastE(t)
     if EPos and EHitChance and EHitChance >= 2 then
         CastSpell(_E, EPos.x, EPos.z)
     end
+end
+
+function SpellDmg(s, t)
+    return getDmg(s, t, myHero) or 0
 end
 
 --[[
