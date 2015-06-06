@@ -1,17 +1,17 @@
 if myHero.charName ~= "Rengar" then return end
-	--require "SxOrbWalk"
+    --require "SxOrbWalk"
     require "HPrediction"
 
 function Debug(message) print("<font color=\"#FFFFFF\"><b>Rengar:</font> </b><font color=\"#4c934c\">" .. message) end
 
 function OnLoad() 
     local ToUpdate = {}
-    ToUpdate.Version = 0.04
+    ToUpdate.Version = 0.05
     ToUpdate.UseHttps = true
     ToUpdate.Host = "raw.githubusercontent.com"
     ToUpdate.VersionPath = "/BoLRepository/Scripts/master/Rengar.version"
     ToUpdate.ScriptPath =  "/BoLRepository/Scripts/master/Rengar.lua"
-	ToUpdate.SavePath = SCRIPT_PATH..GetCurrentEnv().FILE_NAME
+    ToUpdate.SavePath = SCRIPT_PATH..GetCurrentEnv().FILE_NAME
     ToUpdate.CallbackUpdate = function(NewVersion,OldVersion) print("<font color=\"#FFFFFF\"><b>Rengar: </b></font> <font color=\"#4c934c\">Updated to "..NewVersion..". </b></font>") end
     ToUpdate.CallbackNoUpdate = function(OldVersion) print("<font color=\"#FFFFFF\"><b>Rengar: </b></font> <font color=\"#4c934c\">No Updates Found</b></font>") end
     ToUpdate.CallbackNewVersion = function(NewVersion) print("<font color=\"#FFFFFF\"><b>Rengar: </b></font> <font color=\"#4c934c\">New Version found ("..NewVersion.."). Please wait until its downloaded</b></font>") end
@@ -73,14 +73,14 @@ function OnLoad()
     Menu:addParam("laneclearKey", "Lane Clear", SCRIPT_PARAM_ONKEYDOWN, false, GetKey("V"))
     Menu:addParam("lasthitKey", "Last Hit", SCRIPT_PARAM_ONKEYDOWN, false, GetKey("X"))
 
+    --if _G.AutoCarry and Menu.Orbwalker.General.Enabled and Menu.Orbwalker.General.Enabled == true then
+    --Menu.Orbwalker.General.Enabled = false
     DelayAction(function() 
-        --if _G.AutoCarry and Menu.Orbwalker.General.Enabled and Menu.Orbwalker.General.Enabled == true then
-        if _G.AutoCarry then
-            Debug("Found SAC!")
-            --Menu.Orbwalker.General.Enabled = false
-            _SAC = true
+        if _SAC == false then
+            Debug("SAC not Detected!")
+            Debug("Script can not function without SAC, try reloading (F9 x2)")
         end
-    end, 6)
+    end, 15)
 end
 
 function OnTick()
@@ -90,6 +90,10 @@ function OnTick()
         return 
     end
     if _TrueRange > 500 then _TrueRange = myHero.range + GetDistance(myHero.minBBox) end
+    if _SAC == false and _G.AutoCarry then
+        Debug("Found SAC!")
+        _SAC = true
+    end
 
     if Menu.Combo.comboSwitch then
         if Menu.Combo.comboType == 1 then 
@@ -111,6 +115,19 @@ function OnTick()
         return nil
     end
     Target = getTarget()
+
+    if Menu.autoHeal and ((myHero.health / myHero.maxHealth * 100) < Menu.autoHealHP) then
+        if Spells.W.Ready == false then return end
+        if myHero.mana == 5 then 
+            CastSpell(_W) 
+            return
+        end
+
+        if myHero.mana ~= 4 then return end
+        for i, enemy in ipairs(enemyTable) do
+            CastW(enemy)
+        end
+    end
 
     if _Stealth == true then return end
     if Target and Menu.comboKey then
@@ -190,20 +207,6 @@ function OnTick()
                 if _dmg.Q > minion.health then CastQ(minion) end
                 if _dmg.W > minion.health then CastW(minion) end
                 if _dmg.E > minion.health then CastE(minion) end
-            end
-        end
-    end
-
-    if Menu.autoHeal and ((myHero.health / myHero.maxHealth * 100) < Menu.autoHealHP) then
-        if Spells.W.Ready == false then return end
-        if myHero.mana == 5 then 
-            CastSpell(_W) 
-            return
-        end
-
-        for i, enemy in ipairs(enemyTable) do
-            if GetDistance(myHero, enemy) < Spells.W.Range and myHero.mana == 4 then    
-                CastSpell(_W)
             end
         end
     end
