@@ -1,12 +1,11 @@
 if myHero.charName ~= "Rengar" then return end
     --require "SxOrbWalk"
-    require "HPrediction"
 
 function Debug(message) print("<font color=\"#FFFFFF\"><b>Rengar:</font> </b><font color=\"#4c934c\">" .. message) end
 
 function OnLoad() 
     local ToUpdate = {}
-    ToUpdate.Version = 0.05
+    ToUpdate.Version = 0.06
     ToUpdate.UseHttps = true
     ToUpdate.Host = "raw.githubusercontent.com"
     ToUpdate.VersionPath = "/BoLRepository/Scripts/master/Rengar.version"
@@ -18,19 +17,16 @@ function OnLoad()
     ToUpdate.CallbackError = function(NewVersion) print("<font color=\"#FFFFFF\"><b>Rengar: </b></font> <font color=\"#4c934c\">Error while Downloading. Please try again.</b></font>") end
     ScriptUpdate(ToUpdate.Version,ToUpdate.UseHttps, ToUpdate.Host, ToUpdate.VersionPath, ToUpdate.ScriptPath, ToUpdate.SavePath, ToUpdate.CallbackUpdate,ToUpdate.CallbackNoUpdate, ToUpdate.CallbackNewVersion,ToUpdate.CallbackError)
 
-    Spells = {  Q = { Name = "RengarQ", Ready = function() return myHero:CanUseSpell(_Q) end },
-                W = { Name = "RengarW", Ready = function() return myHero:CanUseSpell(_W) end, Range = 480 }, --500
-                E = { Name = "RengarE", Ready = function() return myHero:CanUseSpell(_E) end, Range = 1000, Speed = 1500, Width = 75, Delay = 0.25 },
-                R = { Name = "RengarR", Ready = function() return myHero:CanUseSpell(_R) end } }
-    TH = {  Slot = function() return GetInventorySlotItem(3077) or GetInventorySlotItem(3074) or nil end, Ready = function() return myHero:CanUseSpell(TH.Slot) or false end }      
+    Spells = {  Q = { Name = "RengarQ" },
+                W = { Name = "RengarW", Range = 480 }, --500
+                E = { Name = "RengarE", Range = 1000, Speed = 1500, Width = 75, Delay = 0.25 },
+                R = { Name = "RengarR" }  }
+    TH = { Slot = function() return GetInventorySlotItem(3077) or GetInventorySlotItem(3074) or nil end, Ready = function() return myHero:CanUseSpell(TH.Slot) or false end }      
 
     _SAC = false
     _TrueRange = myHero.range + GetDistance(myHero.minBBox)
     _LastLeap = 0
     _Stealth = false
-
-    HPred = HPrediction()
-    HPred:AddSpell("E","Rengar", {collisionM = true, collisionH = true, delay = Spells.E.Delay, range = Spells.E.Range, speed = Spells.E.Speed, type = "DelayLine", width = Spells.E.Width, IsLowAccuracy = false})
 
     enemyTable = GetEnemyHeroes()
     minions = minionManager(MINION_ENEMY, Spells.E.Range, myHero, MINION_SORT_MAXHEALTH_DEC)
@@ -58,10 +54,12 @@ function OnLoad()
         Menu.LastHit:addParam("empQ", "Use Empowered Q", SCRIPT_PARAM_ONOFF, true)
         Menu.LastHit:addParam("empW", "Use Empowered W", SCRIPT_PARAM_ONOFF, true)
         Menu.LastHit:addParam("empE", "Use Empowered E", SCRIPT_PARAM_ONOFF, true)
-    Menu:addParam("sep", "", SCRIPT_PARAM_INFO, "")
-    Menu:addParam("autoHeal", "Auto-Heal", SCRIPT_PARAM_ONOFF, false)
-    Menu:addParam("autoHealHP", "Auto-Heal % Health", SCRIPT_PARAM_SLICE, 25, 0, 100, 0)
-    Menu:addParam("sep", "", SCRIPT_PARAM_INFO, "") 
+    Menu:addSubMenu("Misc Settings", "Misc")
+        Menu.Misc:addParam("prediction", "Prediction", SCRIPT_PARAM_LIST, 1, {"HPrediction", "VPrediction"})
+        Menu.Misc:addParam("sep", "Requires Reload (F9 x2)", SCRIPT_PARAM_INFO, "")
+        Menu.Misc:addParam("sep", "", SCRIPT_PARAM_INFO, "")
+        Menu.Misc:addParam("autoHeal", "Auto-Heal", SCRIPT_PARAM_ONOFF, false)
+        Menu.Misc:addParam("autoHealHP", "Auto-Heal % Health", SCRIPT_PARAM_SLICE, 25, 0, 100, 0)
     --[[Menu:addSubMenu('Orbwalker', 'Orbwalker')
         SxOrb:LoadToMenu(Menu.Orbwalker, true)
         SxOrb:RegisterHotKey('fight',     Menu, 'comboKey')
@@ -72,6 +70,15 @@ function OnLoad()
     Menu:addParam("harassKey", "Harass", SCRIPT_PARAM_ONKEYDOWN, false, GetKey("C"))
     Menu:addParam("laneclearKey", "Lane Clear", SCRIPT_PARAM_ONKEYDOWN, false, GetKey("V"))
     Menu:addParam("lasthitKey", "Last Hit", SCRIPT_PARAM_ONKEYDOWN, false, GetKey("X"))
+
+    if Menu.Misc.prediction == 1 then
+        require "HPrediction"
+        HPred = HPrediction()
+        HPred:AddSpell("E","Rengar", {collisionM = true, collisionH = true, delay = Spells.E.Delay, range = Spells.E.Range, speed = Spells.E.Speed, type = "DelayLine", width = Spells.E.Width, IsLowAccuracy = false})
+    elseif Menu.Misc.prediction == 2 then
+        require "VPrediction"
+        VPred = VPrediction()
+    end
 
     --if _G.AutoCarry and Menu.Orbwalker.General.Enabled and Menu.Orbwalker.General.Enabled == true then
     --Menu.Orbwalker.General.Enabled = false
@@ -94,15 +101,8 @@ function OnTick()
         Debug("Found SAC!")
         _SAC = true
     end
-
     if Menu.Combo.comboSwitch then
-        if Menu.Combo.comboType == 1 then 
-            Menu.Combo.comboType = 2
-        elseif Menu.Combo.comboType == 2 then 
-            Menu.Combo.comboType = 3
-        elseif Menu.Combo.comboType == 3 then 
-            Menu.Combo.comboType = 1
-        end
+        if Menu.Combo.comboType == 3 then Menu.Combo.comboType = 1 else Menu.Combo.comboType = Menu.Combo.comboType + 1 end
         Menu.Combo.comboSwitch = false
     end
 
@@ -116,100 +116,12 @@ function OnTick()
     end
     Target = getTarget()
 
-    if Menu.autoHeal and ((myHero.health / myHero.maxHealth * 100) < Menu.autoHealHP) then
-        if Spells.W.Ready == false then return end
-        if myHero.mana == 5 then 
-            CastSpell(_W) 
-            return
-        end
-
-        if myHero.mana ~= 4 then return end
-        for i, enemy in ipairs(enemyTable) do
-            CastW(enemy)
-        end
-    end
-
+    if Menu.autoHeal then AutoHeal() end
     if _Stealth == true then return end
-    if Target and Menu.comboKey then
-        if (GetTickCount() - _LastLeap) <= Menu.Combo.comboDelay then
-            if myHero.mana == 5 then
-                if Menu.Combo.comboType == 1 then CastSpell(_Q) end
-                if Menu.Combo.comboType == 2 then CastW(Target) end
-                if Menu.Combo.comboType == 3 then CastE(Target) end
-            else
-                CastQ(Target)
-                CastW(Target)
-                CastE(Target)
-                if TH.Slot ~= nil and GetDistance(Target, myHero) < _TrueRange and TH.Ready == true then CastSpell(TH.Slot) end
-            end
-        elseif myHero.mana == 5 then
-            if Menu.Combo.empQ then CastQ(Target) end              
-            if Menu.Combo.empW then CastW(Target) end
-            if Menu.Combo.empE then CastE(Target) end
-        else
-            CastQ(Target)
-            CastW(Target)
-            CastE(Target)
-        end
-    end
-
-    if Target and Menu.harassKey then
-        if myHero.mana == 5 then
-            if Menu.Harass.empQ then CastQ(Target) end              
-            if Menu.Harass.empW then CastW(Target) end
-            if Menu.Harass.empE then CastE(Target) end          
-        else
-            CastQ(Target)
-            CastW(Target)
-            CastE(Target)
-        end
-    end
-
-    if Menu.laneclearKey then
-        minions:update()
-        for i, minion in ipairs(minions.objects) do
-            if myHero.mana == 5 then
-                if Menu.LaneClear.empQ then CastQ(minion) end              
-                if Menu.LaneClear.empW then CastW(minion) end
-                if Menu.LaneClear.empE then CastE(minion) end          
-            else
-                CastQ(minion)
-                CastW(minion)
-                CastE(minion)
-            end
-        end
-
-        jminions:update()
-        for i, minion in ipairs(jminions.objects) do
-            if myHero.mana == 5 then
-                if Menu.LaneClear.empQ then CastQ(minion) end              
-                if Menu.LaneClear.empW then CastW(minion) end
-                if Menu.LaneClear.empE then CastE(minion) end          
-            else
-                CastQ(minion)
-                CastW(minion)
-                CastE(minion)
-            end
-        end
-    end
-
-    if Menu.lasthitKey then
-        minions:update()
-        for i, minion in ipairs(minions.objects) do
-            _dmg = { Q = SpellDmg("Q", minion) + SpellDmg("AD", minion),
-                     W = SpellDmg("W", minion),
-                     E = SpellDmg("E", minion) }
-            if myHero.mana == 5 then
-                if Menu.LaneClear.empQ and _dmg.Q > minion.health then CastQ(minion) end              
-                if Menu.LaneClear.empW and _dmg.W > minion.health then CastW(minion) end
-                if Menu.LaneClear.empE and _dmg.E > minion.health then CastE(minion) end          
-            else
-                if _dmg.Q > minion.health then CastQ(minion) end
-                if _dmg.W > minion.health then CastW(minion) end
-                if _dmg.E > minion.health then CastE(minion) end
-            end
-        end
-    end
+    if Menu.comboKey and Target then Combo() end
+    if Menu.harassKey and Target then Harass() end
+    if Menu.laneclearKey then LaneClear() end
+    if Menu.lasthitKey then LastHit() end
 end
 
 function OnDraw()
@@ -239,26 +151,140 @@ function OnRemoveBuff(unit, buff)
 end
 
 function CastQ(t)
+    if myHero:CanUseSpell(_Q) ~= READY then return end
     if GetDistance(t, myHero) < _TrueRange then 
         CastSpell(_Q) 
     end
 end
 
 function CastW(t)
+    if myHero:CanUseSpell(_W) ~= READY then return end
     if GetDistance(t, myHero) < Spells.W.Range then 
         CastSpell(_W) 
     end
 end
 
 function CastE(t)
-    EPos, EHitChance = HPred:GetPredict("E", t, myHero)
-    if EPos and EHitChance and EHitChance >= 2 then
-        CastSpell(_E, EPos.x, EPos.z)
+    if myHero:CanUseSpell(_E) ~= READY then return end
+    if Menu.Misc.prediction == 1 then
+        EPos, EHitChance = HPred:GetPredict("E", t, myHero)
+        if EPos and EHitChance and EHitChance >= 2 then
+            CastSpell(_E, EPos.x, EPos.z)
+        end
+    elseif Menu.Misc.prediction == 2 then
+        local CastPosition, HitChance = VPred:GetLineCastPosition(t, Spells.E.Delay, Spells.E.Width, Spells.E.Range, Spells.E.Speed, myHero, true)
+        if CastPosition and HitChance and HitChance >= 2 then
+            CastSpell(_E, CastPosition.x, CastPosition.z)
+        end 
     end
+end
+
+function SpellReady(s) 
+    return myHero:CanUseSpell(s) == READY 
 end
 
 function SpellDmg(s, t)
     return getDmg(s, t, myHero) or 0
+end
+
+--// Combo's Etc.
+function AutoHeal()
+    if (myHero.health / myHero.maxHealth * 100) < Menu.autoHealHP then
+        if Spells.W.Ready == false then return end
+        if myHero.mana == 5 then 
+            CastSpell(_W) 
+            return
+        end
+
+        if myHero.mana ~= 4 then return end
+        for i, enemy in ipairs(enemyTable) do
+            CastW(enemy)
+        end
+    end
+end
+
+function Combo()
+    if not ValidTarget(Target) then return end
+    if (GetTickCount() - _LastLeap) <= Menu.Combo.comboDelay then
+        if myHero.mana == 5 then
+            if Menu.Combo.comboType == 1 then CastSpell(_Q) end
+            if Menu.Combo.comboType == 2 then CastW(Target) end
+            if Menu.Combo.comboType == 3 then CastE(Target) end
+            --if TH.Slot ~= nil and GetDistance(Target, myHero) < _TrueRange and TH.Ready == true then CastSpell(TH.Slot) end
+        else
+            CastQ(Target)
+            CastW(Target)
+            CastE(Target)
+            if TH.Slot ~= nil and GetDistance(Target, myHero) < _TrueRange and TH.Ready == true then CastSpell(TH.Slot) end
+        end
+    elseif myHero.mana == 5 then
+        if Menu.Combo.empQ then CastQ(Target) end              
+        if Menu.Combo.empW then CastW(Target) end
+        if Menu.Combo.empE then CastE(Target) end
+    else
+        CastQ(Target)
+        CastW(Target)
+        CastE(Target)
+    end
+end
+
+function Harass()
+    if not ValidTarget(Target) then return end
+    if myHero.mana == 5 then
+        if Menu.Harass.empQ then CastQ(Target) end              
+        if Menu.Harass.empW then CastW(Target) end
+        if Menu.Harass.empE then CastE(Target) end          
+    else
+        CastQ(Target)
+        CastW(Target)
+        CastE(Target)
+    end
+end
+
+function LaneClear()
+    minions:update()
+    for i, minion in ipairs(minions.objects) do
+        if myHero.mana == 5 then
+            if Menu.LaneClear.empQ then CastQ(minion) end              
+            if Menu.LaneClear.empW then CastW(minion) end
+            if Menu.LaneClear.empE then CastE(minion) end          
+        else
+            CastQ(minion)
+            CastW(minion)
+            CastE(minion)
+        end
+    end
+
+    jminions:update()
+    for i, minion in ipairs(jminions.objects) do
+        if myHero.mana == 5 then
+            if Menu.LaneClear.empQ then CastQ(minion) end              
+            if Menu.LaneClear.empW then CastW(minion) end
+            if Menu.LaneClear.empE then CastE(minion) end          
+        else
+            CastQ(minion)
+            CastW(minion)
+            CastE(minion)
+        end
+    end
+end
+
+function LastHit()
+    minions:update()
+    for i, minion in ipairs(minions.objects) do
+        _dmg = { Q = SpellDmg("Q", minion) + SpellDmg("AD", minion),
+                 W = SpellDmg("W", minion),
+                 E = SpellDmg("E", minion) }
+        if myHero.mana == 5 then
+            if Menu.LaneClear.empQ and _dmg.Q > minion.health then CastQ(minion) end              
+            if Menu.LaneClear.empW and _dmg.W > minion.health then CastW(minion) end
+            if Menu.LaneClear.empE and _dmg.E > minion.health then CastE(minion) end          
+        else
+            if _dmg.Q > minion.health then CastQ(minion) end
+            if _dmg.W > minion.health then CastW(minion) end
+            if _dmg.E > minion.health then CastE(minion) end
+        end
+    end
 end
 
 --[[
