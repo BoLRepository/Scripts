@@ -1,0 +1,79 @@
+Callback.Bind("RecvPacket", function(p)
+	if p.header == BuffHeader.GAIN then
+		local b, c = {}, {}
+		p.pos = 1
+		b.Target	= Game.ObjectByNetworkId(p:Decode4())
+		b.Slot		= p:Decode1()
+		b.Type		= p:Decode1()
+		b.Stacks	= p:Decode1()
+		b.Visible	= p:Decode1()
+		b.ID		= p:Decode4()
+		c.crap		= p:Decode4() -- 2. time Target.networkid
+		c.crap2		= p:Decode4() -- idk, useless
+		b.Duration	= p:DecodeF()
+		b.Source	= Game.ObjectByNetworkId(p:Decode4())
+		--------------------------
+		b.Start		= Game.Timer()
+		b.End		= Game.Timer() + b.Duration
+		DelayAction(function(b)
+			local Buff = b
+			Buff.name = b.Target:GetBuff(1).name or ""			
+			--OnGainBuffCallback(Buff.Target, Buff)		
+		end, 1, {b})	
+	elseif p.header == BuffHeader.UPDATE1 then
+		local b = {}
+		p.pos = 1
+		b.Target	= Game.ObjectByNetworkId(p:Decode4())
+		b.Slot		= p:Decode1() + 1
+		b.Stacks	= p:Decode1()
+		b.Duration	= p:DecodeF()
+		b.Past		= p:DecodeF()
+		b.Source	= Game.ObjectByNetworkId(p:Decode4())
+		--------------------------
+		b.Type		= Buff.NONE
+		b.Start		= Game.Timer()
+		b.End		= Game.Timer() + b.Duration
+		DelayAction(function(b)
+			local Buff = b			
+			Buff.name = b.Target:GetBuff(1).name or ""			
+			--OnUpdateBuffCallback(Buff.Target, Buff)		
+		end, 1, {b})	
+	elseif p.header == BuffHeader.UPDATE2 then
+		local b = {}
+		p.pos = 1	
+		b.Target	= Game.ObjectByNetworkId(p:Decode4())
+		b.Slot		= p:Decode1() + 1
+		b.Past		= p:DecodeF()
+		b.Duration	= p:DecodeF()
+		b.Source	= Game.ObjectByNetworkId(p:Decode4())
+		---------------------------
+		b.Stacks	= 1
+		b.Type		= Buff.NONE
+		b.Start		= Game.Timer()
+		b.End		= Game.Timer() + b.Duration
+		DelayAction(function(b)
+			local Buff = b
+			Buff.name = b.Target:GetBuff(1).name or ""			
+			--OnUpdateBuffCallback(Buff.Target, Buff)		
+		end, 1, {b})		
+	elseif p.header == BuffHeader.LOST then
+		local b = {}
+		p.pos = 1
+		b.Target	= Game.ObjectByNetworkId(p:Decode4())
+		b.Slot		= p:Decode1() + 1
+		b.ID		= p:Decode4()
+		b.Duration	= p:DecodeF()
+		------------------------
+		b.Type		= Buff.NONE
+		b.Stacks	= 1
+		-- Replace Duration with 0 because the buff is over.
+		b.Duration	= 0
+		b.Start		= 0
+		b.End		= Game.Timer() - 1
+		DelayAction(function(b)
+			local Buff = b		
+			Buff.name = b.Target:GetBuff(1).name or ""			
+			--OnLoseBuffCallback(Buff.Target, Buff)		
+		end, 1, {b})	
+	end
+end)
