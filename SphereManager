@@ -1,0 +1,80 @@
+local sphere = nil
+function OnLoad()
+	sphere = SphereManager()
+end
+function OnTick()
+	-- get pos: sphere.spherelocation
+end
+ 
+class 'SphereManager'
+ 
+	function SphereManager:__init()
+ 
+		self.activeRange = 2000 * 2000
+ 
+		self.sphereLocation = myHero
+ 
+		for i = 1, objManager.maxObjects do
+			local object = objManager:getObject(i)
+			if object and object.name and object.name:lower():find('doomball') then
+				self.sphereLocation = object
+			end
+		end
+ 
+		AddAnimationCallback(function(unit, animation)
+			if unit.isMe and animation == 'Prop' then
+				self.activeTarget = nil
+				self.sphereLocation = myHero
+			end
+		end)
+		        
+		AddProcessSpellCallback(function(unit, spell)
+			if unit.isMe and spell.name:lower():find('orianaredactcommand') then
+				self.activeTarget = spell.target
+			end
+		end)
+ 
+		AddCreateObjCallback(function(object)
+			if object and object.name then
+				if object.name:lower():find('linemissile') and object.spellOwner.isMe then
+					self.sphereLocation = object
+				elseif object.name:lower():find('orianna_base_z_ball_glow_green') then
+					self.sphereLocation = object
+				end
+			end
+		end)
+ 
+		AddTickCallback(function()
+			if GetDistanceSqr(self.sphereLocation) < self.activeRange then
+				self.lastSphereLocation = Vector(self.sphereLocation)
+			elseif self.activeTarget then
+				self.sphereLocation = self.activeTarget
+				self.activeTarget = nil
+			else
+				self.sphereLocation = self.lastSphereLocation
+			end
+		end)
+ 
+		self.polygon = {{}, {}, {}}
+		self.quality = 2 * math.pi / 8
+ 
+		AddDrawCallback(function()
+			if self.sphereLocation then
+				local i = 1
+				local k = 0
+				for theta = 0, 2 * math.pi + self.quality, self.quality do
+					self.polygon[1][i] = Vector(self.sphereLocation.x + 80 * math.cos(theta), self.sphereLocation.y, self.sphereLocation.z - 80 * math.sin(theta))
+					if i % 2 == 1 then
+						self.polygon[2][i-k] = self.polygon[1][i]
+						k = k + 1
+					else
+						self.polygon[3][i-k] = self.polygon[1][i]
+					end
+					i = i + 1
+				end
+				for i = 1, 3 do
+					DrawLines3D(self.polygon[i], 3, 4294967295)
+				end
+			end
+		end)
+	end
