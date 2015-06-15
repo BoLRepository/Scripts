@@ -5,7 +5,7 @@ function Debug(message) print("<font color=\"#FFFFFF\"><b>Rengar:</font> </b><fo
 
 function OnLoad() 
     local ToUpdate = {}
-    ToUpdate.Version = 0.07
+    ToUpdate.Version = 0.08
     ToUpdate.UseHttps = true
     ToUpdate.Host = "raw.githubusercontent.com"
     ToUpdate.VersionPath = "/BoLRepository/Scripts/master/Rengar.version"
@@ -44,7 +44,6 @@ function OnLoad()
         Menu.Combo:addParam("comboDraw", "Draw Combo Type", SCRIPT_PARAM_ONOFF, true)
         Menu.Combo:addParam("comboSwitch", "Switch Combo Type (Default: T)", SCRIPT_PARAM_ONKEYTOGGLE, false, GetKey("T"))
         Menu.Combo:addParam("sep", "", SCRIPT_PARAM_INFO, "")
-        Menu.Combo:addParam("exp", "Use Experimental Combo (Below)", SCRIPT_PARAM_ONOFF, true)
         Menu.Combo:addParam("aaE", "Only Empowered E outside AA-Range", SCRIPT_PARAM_ONOFF, true)
         Menu.Combo:addParam("drE", "Try to not overlap E slow/root", SCRIPT_PARAM_ONOFF, true)
     Menu:addSubMenu("Harass Menu", "Harass")
@@ -176,6 +175,19 @@ end
 
 function CastE(t)
     if myHero:CanUseSpell(_E) ~= READY then return end
+    --E 2.5, EE 1.75
+    local function canE()
+        if Menu.Combo.drE then
+            if Menu.Combo.aaE and GetDistance(Target, myHero) < _TrueRange and myHero.mana == 5 then return false end
+            if Target == _LastE.Target and (GetTickCount() - _LastE.Time) <= 2000 then
+                if Menu.Combo.empE and myHero.mana == 5 then return true end
+                return false
+            end
+        end
+        return true
+    end
+    if canE() == false then return end
+
     if Menu.Misc.prediction == 1 then
         EPos, EHitChance = HPred:GetPredict("E", t, myHero)
         if EPos and EHitChance and EHitChance >= 2 then
@@ -215,66 +227,26 @@ end
 
 function Combo()
     if not ValidTarget(Target) then return end
-    
-    if Menu.Combo.exp then
-        --//Experimental Combo
-        --E 2.5, EE 1.75
-        local function canE()
-            if Menu.Combo.drE then
-                if Menu.Combo.aaE and GetDistance(Target, myHero) < _TrueRange and myHero.mana == 5 then return false end
-                if Target == _LastE.Target and (GetTickCount() - _LastE.Time) <= 2000 then
-                    if Menu.Combo.empE and myHero.mana == 5 then return true end
-                    return false
-                end
-            end
-            return true
-        end
-        local _canE = canE()
-
-        if (GetTickCount() - _LastLeap) <= Menu.Combo.comboDelay then
-            if myHero.mana == 5 then
-                if Menu.Combo.comboType == 1 then CastSpell(_Q) end
-                if Menu.Combo.comboType == 2 then CastW(Target) end
-                if Menu.Combo.comboType == 3 then CastE(Target) end
-                if TH.Slot ~= nil and GetDistance(Target, myHero) < _TrueRange and TH.Ready == true then CastSpell(TH.Slot) end
-            else
-                CastQ(Target)
-                CastW(Target)
-                if _canE then CastE(Target) end
-                if TH.Slot ~= nil and GetDistance(Target, myHero) < _TrueRange and TH.Ready == true then CastSpell(TH.Slot) end
-            end
-        elseif myHero.mana == 5 then
-            if Menu.Combo.empQ then CastQ(Target) end              
-            if Menu.Combo.empW then CastW(Target) end
-            if Menu.Combo.empE and _canE then CastE(Target) end
-        else
-            CastQ(Target)
-            CastW(Target)
-            if _canE then CastE(Target) end
-        end
-    else
-        --//Normal Combo
-        if (GetTickCount() - _LastLeap) <= Menu.Combo.comboDelay then
-            if myHero.mana == 5 then
-                if Menu.Combo.comboType == 1 then CastSpell(_Q) end
-                if Menu.Combo.comboType == 2 then CastW(Target) end
-                if Menu.Combo.comboType == 3 then CastE(Target) end
-                if TH.Slot ~= nil and GetDistance(Target, myHero) < _TrueRange and TH.Ready == true then CastSpell(TH.Slot) end
-            else
-                CastQ(Target)
-                CastW(Target)
-                CastE(Target)
-                if TH.Slot ~= nil and GetDistance(Target, myHero) < _TrueRange and TH.Ready == true then CastSpell(TH.Slot) end
-            end
-        elseif myHero.mana == 5 then
-            if Menu.Combo.empQ then CastQ(Target) end              
-            if Menu.Combo.empW then CastW(Target) end
-            if Menu.Combo.empE then CastE(Target) end
+    if (GetTickCount() - _LastLeap) <= Menu.Combo.comboDelay then
+        if myHero.mana == 5 then
+            if Menu.Combo.comboType == 1 then CastSpell(_Q) end
+            if Menu.Combo.comboType == 2 then CastW(Target) end
+            if Menu.Combo.comboType == 3 then CastE(Target) end
+            if TH.Slot ~= nil and GetDistance(Target, myHero) < _TrueRange and TH.Ready == true then CastSpell(TH.Slot) end
         else
             CastQ(Target)
             CastW(Target)
             CastE(Target)
+            if TH.Slot ~= nil and GetDistance(Target, myHero) < _TrueRange and TH.Ready == true then CastSpell(TH.Slot) end
         end
+    elseif myHero.mana == 5 then
+        if Menu.Combo.empQ then CastQ(Target) end              
+        if Menu.Combo.empW then CastW(Target) end
+        if Menu.Combo.empE then CastE(Target) end
+    else
+        CastQ(Target)
+        CastW(Target)
+        CastE(Target)
     end
 end
 
