@@ -5,7 +5,7 @@ function Debug(message) print("<font color=\"#FFFFFF\"><b>Rengar:</font> </b><fo
 
 function OnLoad() 
     local ToUpdate = {}
-    ToUpdate.Version = 0.07
+    ToUpdate.Version = 0.04
     ToUpdate.UseHttps = true
     ToUpdate.Host = "raw.githubusercontent.com"
     ToUpdate.VersionPath = "/BoLRepository/Scripts/master/Rengar.version"
@@ -148,7 +148,7 @@ function OnApplyBuff(source, unit, buff)
     end
 
     if unit and not unit.isMe and unit.type == myHero.type then
-        if buff.name == "rengareslow" or "RengarEFinalMAX" then
+        if buff.name:lower():find("rengareslow" or "rengarefinalmax") then --RengarEFinalMAX
             _LastE = { Target = unit, Time = GetTickCount() }
         end
     end
@@ -221,7 +221,7 @@ function Combo()
         --E 2.5, EE 1.75
         local function canE()
             if Menu.Combo.drE then
-                if Menu.Combo.aaE and myHero.mana == 5 and GetDistance(Target, myHero) < _TrueRange then return false end
+                if Menu.Combo.aaE and GetDistance(Target, myHero) < _TrueRange and myHero.mana == 5 then return false end
                 if Target == _LastE.Target and (GetTickCount() - _LastE.Time) <= 2000 then
                     if Menu.Combo.empE and myHero.mana == 5 then return true end
                     return false
