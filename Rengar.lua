@@ -177,12 +177,12 @@ function CastE(t)
     if myHero:CanUseSpell(_E) ~= READY then return end
     --E 2.5, EE 1.75
     local function canE()
-        if Menu.Combo.drE then
-            if Menu.Combo.aaE and GetDistance(Target, myHero) < _TrueRange and myHero.mana == 5 then return false end
-            if Target == _LastE.Target and (GetTickCount() - _LastE.Time) <= 2000 then
-                if Menu.Combo.empE and myHero.mana == 5 then return true end
-                return false
-            end
+        if Menu.Combo.aaE and GetDistance(Target, myHero) < _TrueRange and myHero.mana == 5 and (GetTickCount() - _LastLeap) > Menu.Combo.comboDelay then 
+            return false 
+        end
+        if Menu.Combo.drE and Target == _LastE.Target and (GetTickCount() - _LastE.Time) <= 2000 then
+            if Menu.Combo.empE and myHero.mana == 5 then return true end
+            return false
         end
         return true
     end
