@@ -5,7 +5,7 @@ function Debug(message) print("<font color=\"#FFFFFF\"><b>Rengar:</font> </b><fo
 
 function OnLoad() 
     local ToUpdate = {}
-    ToUpdate.Version = 0.09
+    ToUpdate.Version = 0.10
     ToUpdate.UseHttps = true
     ToUpdate.Host = "raw.githubusercontent.com"
     ToUpdate.VersionPath = "/BoLRepository/Scripts/master/Rengar.version"
@@ -78,7 +78,7 @@ function OnLoad()
     if Menu.Misc.prediction == 1 then
         require "HPrediction"
         HPred = HPrediction()
-        HPred:AddSpell("E","Rengar", {collisionM = true, collisionH = true, delay = Spells.E.Delay, range = Spells.E.Range, speed = Spells.E.Speed, type = "DelayLine", width = Spells.E.Width, IsLowAccuracy = false})
+        HPred_E  = HPSkillshot({type = "DelayLine", delay = Spells.E.Delay, range = Spells.E.Range, speed = Spells.E.Speed, collisionM = true, collisionH = true, width = Spells.E.Width, })
     elseif Menu.Misc.prediction == 2 then
         require "VPrediction"
         VPred = VPrediction()
@@ -189,7 +189,7 @@ function CastE(t)
     if canE() == false then return end
 
     if Menu.Misc.prediction == 1 then
-        EPos, EHitChance = HPred:GetPredict("E", t, myHero)
+        EPos, EHitChance = HPred:GetPredict(HPred_E, t, myHero)
         if EPos and EHitChance and EHitChance >= 2 then
             CastSpell(_E, EPos.x, EPos.z)
         end
