@@ -1,11 +1,10 @@
 if myHero.charName ~= "Rengar" then return end
-    --require "SxOrbWalk"
 
 function Debug(message) print("<font color=\"#FFFFFF\"><b>Rengar:</font> </b><font color=\"#4c934c\">" .. message) end
 
 function OnLoad() 
     local ToUpdate = {}
-    ToUpdate.Version = 0.11
+    ToUpdate.Version = 0.12
     ToUpdate.UseHttps = true
     ToUpdate.Host = "raw.githubusercontent.com"
     ToUpdate.VersionPath = "/BoLRepository/Scripts/master/Rengar.version"
@@ -23,7 +22,7 @@ function OnLoad()
                 R = { Name = "RengarR" }  }
     TH = { Slot = function() return GetInventorySlotItem(3077) or GetInventorySlotItem(3074) or nil end, Ready = function() return myHero:CanUseSpell(TH.Slot) or false end }      
 
-    _SAC = false
+    _SAC, _MMA = false, false
     _TrueRange = myHero.range + GetDistance(myHero.minBBox)
     _LastLeap = 0
     _Stealth = false
@@ -64,12 +63,6 @@ function OnLoad()
         Menu.Misc:addParam("sep", "", SCRIPT_PARAM_INFO, "")
         Menu.Misc:addParam("autoHeal", "Auto-Heal", SCRIPT_PARAM_ONOFF, false)
         Menu.Misc:addParam("autoHealHP", "Auto-Heal % Health", SCRIPT_PARAM_SLICE, 25, 0, 100, 0)
-    --[[Menu:addSubMenu('Orbwalker', 'Orbwalker')
-        SxOrb:LoadToMenu(Menu.Orbwalker, true)
-        SxOrb:RegisterHotKey('fight',     Menu, 'comboKey')
-        SxOrb:RegisterHotKey('harass',    Menu, 'harassKey')
-        SxOrb:RegisterHotKey('laneclear', Menu, 'laneclearKey')
-        SxOrb:RegisterHotKey('lasthit',   Menu, 'lasthitKey')]]
     Menu:addParam("comboKey", "Combo", SCRIPT_PARAM_ONKEYDOWN, false, 32)
     Menu:addParam("harassKey", "Harass", SCRIPT_PARAM_ONKEYDOWN, false, GetKey("C"))
     Menu:addParam("laneclearKey", "Lane Clear", SCRIPT_PARAM_ONKEYDOWN, false, GetKey("V"))
@@ -84,12 +77,10 @@ function OnLoad()
         VPred = VPrediction()
     end
 
-    --if _G.AutoCarry and Menu.Orbwalker.General.Enabled and Menu.Orbwalker.General.Enabled == true then
-    --Menu.Orbwalker.General.Enabled = false
     DelayAction(function() 
-        if _SAC == false then
-            Debug("SAC not Detected!")
-            Debug("Script can not function without SAC, try reloading (F9 x2)")
+        if _SAC == false and _MMA == false then
+            Debug("SAC:R/MMA not Detected!")
+            Debug("Script can not function without SAC:R/MMA, try reloading (F9 x2)")
         end
     end, 15)
 end
@@ -103,18 +94,22 @@ function OnTick()
     end
     if _TrueRange > 500 then _TrueRange = myHero.range + GetDistance(myHero.minBBox) end
     if _SAC == false and _G.AutoCarry then
-        Debug("Found SAC!")
+        Debug("Found SAC:R!")
         _SAC = true
+    elseif _MMA == false and _G.MMA_IsLoaded then
+        Debug("Found MMA!")
+        _MMA = true
     end
     if Menu.Combo.comboSwitch then
         if Menu.Combo.comboType == 3 then Menu.Combo.comboType = 1 else Menu.Combo.comboType = Menu.Combo.comboType + 1 end
         Menu.Combo.comboSwitch = false
     end
+
     local function getTarget()
         if _SAC and ValidTarget(_G.AutoCarry.Crosshair:GetTarget()) then 
             return _G.AutoCarry.Crosshair:GetTarget()
-        --[[elseif Menu.Orbwalker.General.Enabled and Menu.Orbwalker.General.Enabled == true and ValidTarget(SxOrb:GetTarget()) then
-            return SxOrb:GetTarget()]]
+        elseif _MMA and ValidTarget(_G.MMA_Target()) then
+            return _G.MMA_Target()
         end
         return nil
     end
